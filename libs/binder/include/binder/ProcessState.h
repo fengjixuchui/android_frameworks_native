@@ -42,6 +42,8 @@ public:
      * any call to ProcessState::self(). The default is /dev/vndbinder
      * for processes built with the VNDK and /dev/binder for those
      * which are not.
+     *
+     * If this is called with nullptr, the behavior is the same as selfOrNull.
      */
     static  sp<ProcessState>    initWithDriver(const char *driver);
 
@@ -90,6 +92,8 @@ public:
             void setCallRestriction(CallRestriction restriction);
 
 private:
+    static  sp<ProcessState>    init(const char *defaultDriver, bool requireDefault);
+
     friend class IPCThreadState;
     
             explicit            ProcessState(const char* driver);
@@ -110,11 +114,14 @@ private:
             int                 mDriverFD;
             void*               mVMStart;
 
-            // Protects thread count variable below.
+            // Protects thread count and wait variables below.
             pthread_mutex_t     mThreadCountLock;
+            // Broadcast whenever mWaitingForThreads > 0
             pthread_cond_t      mThreadCountDecrement;
             // Number of binder threads current executing a command.
             size_t              mExecutingThreadsCount;
+            // Number of threads calling IPCThreadState::blockUntilThreadAvailable()
+            size_t              mWaitingForThreads;
             // Maximum number for binder threads allowed for this process.
             size_t              mMaxThreads;
             // Time when thread pool was emptied
